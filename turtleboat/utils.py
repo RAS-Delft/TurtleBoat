@@ -1,5 +1,31 @@
 from enum import Enum, auto
 import numpy as np
+from sensor_msgs.msg import JointState
+
+def get_value_from_jointstate(message:JointState,name_item:str,paramtype:int=0):
+	""" looks through the jointstate messsage for the specified item 
+	
+	:param: message = JointState message
+	:param: name_item = name of the item to look for
+	:param: paramtype = 0 for position, 1 for velocity, 2 for effort
+	
+	"""
+	for i in range(0, len(message.name) ):
+		if message.name[i] == name_item:
+			# The specified item has been found in the list. 
+			# Return the value according to the specified paramtype
+			if paramtype == 0:
+				return message.position[i]
+			elif paramtype == 1:
+				return message.velocity[i]
+			elif paramtype == 2:
+				return message.effort[i]
+			else:
+				# In case the specified paramtype is not valid
+				return np.nan
+	
+	# In case the specified item is not in the list
+	return np.nan
 
 def euler_to_quaternion(roll, pitch, yaw):
 	"""
