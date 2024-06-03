@@ -25,6 +25,5 @@ RUN . /opt/ros/iron/setup.sh && \
 # Set tasks to be run upon container startup
 CMD . /opt/ros/iron/setup.sh && \
     . /ros2_ws/install/setup.sh && \
-    export ROS_DOMAIN_ID=69 && \
     echo "my vesselID is '${VESSEL_ID}'" && \
     ros2 run turtleboat turtleboatmain --ros-args --remap __ns:=/${VESSEL_ID}
