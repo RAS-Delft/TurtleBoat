@@ -10,7 +10,13 @@ from rclpy.node import Node
 from std_srvs.srv import Trigger as TriggerSrv
 from sensor_msgs.msg import Imu
 from turtleboat.utils import euler_to_quaternion, ActuationState, SimulationState, cross3, R3_euler_xyz, getCoriolisCentripetal, Statuscolors, get_value_from_jointstate
+from rclpy.qos import QoSProfile
+from rclpy.qos import QoSReliabilityPolicy, QoSHistoryPolicy, QoSDurabilityPolicy
+
+
 R_EARTH = 6371000 #m
+
+
 
 class Vessel:	
 	"""
@@ -250,6 +256,18 @@ class VesselSimNode(Node):
 		# Set up vessel object
 		self.vessel = Vessel(self.get_parameter("initial_pose").get_parameter_value().double_array_value,self.get_parameter("initial_velocity").get_parameter_value().double_array_value)
 	
+		# Make a Quality of Service profile that is used for all publishers
+		# This profile is set to the most lightweight profile possible, as the data is not critical and can be lost
+		custom_qos_profile = QoSProfile(
+    		reliability=QoSReliabilityPolicy.BEST_EFFORT,
+    		history=QoSHistoryPolicy.KEEP_LAST,
+    		depth=1,
+    		durability=QoSDurabilityPolicy.VOLATILE
+		)
+
+
+
+
 		# Set up event scheduling
 		self.timestamp_start = time.time()
 		self.timestamp_last_simstep = time.time()
@@ -264,23 +282,23 @@ class VesselSimNode(Node):
 		self.actuationState = ActuationState.timeout
 
 		# Make ros2 publishers and subscribers for main functionality
-		self.positionPub = self.create_publisher(NavSatFix, 'telemetry/gnss/fix', 10)
-		self.headingPub = self.create_publisher(Float32, 'telemetry/heading', 10)
-		self.actuatorReferenceSub_prio = self.create_subscription(JointState, 'reference/actuation_prio',self.actuationCallback_prio,10)
-		self.actuatorReferenceSub = self.create_subscription(JointState, 'reference/actuation',self.actuationCallback,10)
+		self.positionPub = self.create_publisher(NavSatFix, 'telemetry/gnss/fix', custom_qos_profile)
+		self.headingPub = self.create_publisher(Float32, 'telemetry/heading', custom_qos_profile)
+		self.actuatorReferenceSub_prio = self.create_subscription(JointState, 'reference/actuation_prio',self.actuationCallback_prio,custom_qos_profile)
+		self.actuatorReferenceSub = self.create_subscription(JointState, 'reference/actuation',self.actuationCallback,custom_qos_profile)
 	
 		# Optional publishers that communicate diagnostics and system state
 		if self.get_parameter("stream_auxiliary_state").get_parameter_value().bool_value:
-			self.forcePub_resultant = self.create_publisher(Wrench, 'diagnostics/sim_state/f_resultant', 10)
-			self.forcePub_actuator = self.create_publisher(Wrench, 'diagnostics/sim_state/f_actuator', 10)
-			self.forcePub_drag = self.create_publisher(Wrench, 'diagnostics/sim_state/f_drag', 10)
-			self.forcePub_corioliscentripetal = self.create_publisher(Wrench, 'diagnostics/sim_state/f_corioliscentripetal', 10)
-			self.velocityPub = self.create_publisher(Twist, 'diagnostics/sim_state/velocity', 10)
-			self.actuatorStatePub = self.create_publisher(Float32MultiArray, 'diagnostics/sim_state/actuator_state', 10)
-			self.actuatorRefPub = self.create_publisher(Float32MultiArray, 'diagnostics/sim_state/actuator_reference', 10)
+			self.forcePub_resultant = self.create_publisher(Wrench, 'diagnostics/sim_state/f_resultant', custom_qos_profile)
+			self.forcePub_actuator = self.create_publisher(Wrench, 'diagnostics/sim_state/f_actuator', custom_qos_profile)
+			self.forcePub_drag = self.create_publisher(Wrench, 'diagnostics/sim_state/f_drag', custom_qos_profile)
+			self.forcePub_corioliscentripetal = self.create_publisher(Wrench, 'diagnostics/sim_state/f_corioliscentripetal', custom_qos_profile)
+			self.velocityPub = self.create_publisher(Twist, 'diagnostics/sim_state/velocity', custom_qos_profile)
+			self.actuatorStatePub = self.create_publisher(Float32MultiArray, 'diagnostics/sim_state/actuator_state', custom_qos_profile)
+			self.actuatorRefPub = self.create_publisher(Float32MultiArray, 'diagnostics/sim_state/actuator_reference', custom_qos_profile)
 		
 		if self.get_parameter('imu_enabled').value:
-			self.imuPub = self.create_publisher(Imu, 'telemetry/imu', 10)
+			self.imuPub = self.create_publisher(Imu, 'telemetry/imu', custom_qos_profile)
 
 		# Create timer objects
 		self.timer_simstep = self.create_timer(1/self.get_parameter("simulator_frequency_target").get_parameter_value().double_value, self.timer_callback_simstep)
