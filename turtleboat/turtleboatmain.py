@@ -611,12 +611,13 @@ def main(args=None):
     try:
         rclpy.spin(node)
     except KeyboardInterrupt:
-        print(" Stopping cleanly")
+        pass
     except Exception as e:
         print(f"An unexpected error occurred: {e}")
     finally:
+        node.destroy_node()
         if rclpy.ok():
-            node.destroy_node()
+            
             rclpy.shutdown()
 
 if __name__ == '__main__':
